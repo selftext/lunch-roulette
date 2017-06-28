@@ -43,8 +43,8 @@ class LunchRoulette
     o = OptionParser.new do |o|
       o.banner = "Usage: ruby lunch_roulette.rb [OPTIONS]"
       o.on('-f', '--file F', 'Offline people input: read people data from provided CSV') { |f| options[:people_file] = f.to_s }
-      o.on('-s', '--file S', 'Offline survey input: read survey data from provided CSV') { |s| options[:survey_file] = f.to_s }
       o.on('-o', '--offline', "Offline output: write timestamped CSV data locally to output directory") { options[:offline] = true }
+      o.on('-s', '--survey', 'read survey data from configured Google sheet') { options[:survey] = true }
       o.on('-i', '--iterations I', "Iterations, default #{ITERATIONS}") { |i| options[:iterations] = i.to_i }
       o.on('-v', '--valid', "Stop searching when the first valid set is encountered") { options[:valid] = true }
       o.on('-c', '--concise', "Concise output: suppress stats and previous-lunches printouts") { |c| options[:concise_output] = true }
@@ -99,7 +99,7 @@ class LunchRoulette
       valid_sets += 1 if new_set.valid?
       print "#{valid_sets == 0 ? '🐄' : '🍔'}  Valid sets found: #{valid_sets}. Percent complete: #{((100.0 * (i += 1) / iterations)).round(4)}%\r"
       
-      return new_set.tap{puts "\n"} if new_set.valid? && Config.options[:valid]
+      break new_set if new_set.valid? && Config.options[:valid]
 
       [leader, new_set].compact.select(&:valid?).min_by(&:score)
     end.tap{puts "\n"}
@@ -134,12 +134,11 @@ class LunchRoulette
 
   def surveys
     @surveys ||= 
-      if Config.options[:survey_file]
-        puts "Reading survey file from: #{Config.options[:survey_file]}"
-        CsvClient.read_csv(Config.options[:survey_file])
-      else
+      if Config.options[:survey]
         puts "Downloading surveys sheet from: #{SPREADSHEET_URL}"
         SheetsClient.get(SPREADSHEET_ID, SURVEY_RANGE)
+      else
+        []
       end.map do |s|
         next unless s.length == 3
         Survey.new(
