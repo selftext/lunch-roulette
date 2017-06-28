@@ -1,81 +1,66 @@
 class LunchRoulette
   class LunchSet
 
-    attr_accessor :score, :groups, :valid, :previous_lunch_stats, :previous_lunches
+    MIN_GROUP_SIZE = Config.config[:min_group_size]
 
-    def initialize(staff)
-      # Shuffle our incoming people:
-      @lunchers = staff.shuffle
-      @groups = generate_groups
-      @score = @groups.map{ |g| g.score}.sum
-      @previous_lunches = {}
-      previous_lunch_stats
-      @valid = valid_set?
+    attr_accessor :id, :groups
+
+    def initialize(id:, groups:)
+      @id = id
+      @groups = groups
     end
 
-    def config
-      LunchRoulette::Config
+    def self.generate(people)
+      set_id = people.flat_map(&:lunches).map(&:set_id).max.to_i + 1
+      groups = generate_groups(set_id: set_id, people: people)
+      new(id: set_id, groups: groups)
     end
 
-    def inspect
-      @groups.map.with_index{|group, index| "Group #{index + 1}: #{group.inspect}"}
-    end
-
-    #For CSV naming purposes
-    def name
-      Digest::MD5.hexdigest inspect.to_s
-    end
-
-    def generate_groups
-      lunchers = @lunchers.select{ |l| l.lunchable } # filter out The Unlunchables
+    def self.generate_groups(set_id:, people:)
+      group_count = people.length / MIN_GROUP_SIZE
       groups = []
-      min_lunch_group_size = config.min_lunch_group_size
-      until lunchers.empty?
-        # First check whether we have enough people to create a new group
-        if lunchers.size < min_lunch_group_size
-          # If we don't have enough people to do a new group
-          lunchers.size.times do
-            # Randomly pick a group to put them in
-            random_group = (rand groups.size)
-            groups[random_group] = LunchGroup.new([groups[random_group].people, lunchers.pop].flatten)
-          end
+      people.each_with_index do |person, i|
+        group_index = i % group_count
+        groups[group_index] = Array(groups[group_index]) << person
+      end
+      groups.map.with_index do |g, i| 
+        LunchGroup.new(
+          id: i + 1,
+          people: g.map{|p| p.add_lunch(Lunch.new(set_id: set_id, group_id: i + 1))}
+        )
+      end
+    end
+
+    def people
+      @people ||= groups.flat_map(&:people)
+    end
+
+    def score
+      @score ||= groups.map(&:score).sum
+    end
+
+    def valid?
+      @valid ||= groups.map(&:valid?).all?
+    end
+
+    def inspect_previous_groups
+      groups.map do |g| 
+        previous_groups = g.inspect_previous_groups
+        if previous_groups.empty?
+          "🐣  #{g.inspect}\n   No prior shared lunches!"
         else
-          # If we do have enough people to create a new group
-          # Pick our minimum number of people and throw them in a group
-          group = LunchGroup.new(lunchers.pop(min_lunch_group_size))
-          groups << group
+          "🥚  #{g.inspect}\n   #{previous_groups.length} prior#{'s' unless previous_groups.length == 1}: " + 
+          previous_groups.join(', ')
         end
-      end
-      groups.map.with_index{|g, i| g.id = config.maxes['lunch_id'].to_i + i + 1 }
-      groups
+      end.join("\n")
     end
 
-    # For each group, find how many people have had lunch with each other previously
-    # in groups of 2, 3, ... etc.
-    def previous_lunch_stats
-      config.match_thresholds.each do |match_threshold|
-        @groups.each do |group|
-          @previous_lunches[match_threshold] ||= 0
-          @previous_lunches[match_threshold] += [group.previous_lunches[match_threshold]].flatten.compact.size
-        end
-      end
+    def inspect_scores
+      ["Overall score #{score.round(3)}", groups.map(&:inspect_scores)].join("\n")
     end
 
-    def valid_set?
-      @valid = true
-      # Are there any groups that are individually too low-scoring to allow?
-      groups.each do |group|
-        @valid = false if group.score < config.min_group_score
-      end
-      # Are there any people with the same specialty in the same group?
-      groups.map do |group|
-        specialities = group.people.map{|person| person.specialty }.compact
-        if specialities.uniq.size != specialities.size
-          @valid = false
-        end
-      end
-      @valid
+    def inspect_emails
+      groups.map(&:inspect_emails).join("\n")
     end
-
   end
 end

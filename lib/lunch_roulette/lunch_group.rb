@@ -1,84 +1,108 @@
 class LunchRoulette
   class LunchGroup
 
-    attr_accessor :people, :score, :valid, :previous_lunches, :scores, :id
+    MAX_MANAGER_SCORE = Config.config[:max_manager_score]
+    MAX_PREVIOUS_LUNCHES_SCORE = Config.config[:max_previous_lunches_score]
 
-    def initialize(chosen_people = [])
-      @config = config
-      @people = chosen_people
-      @previous_lunches = {}
-      find_previous_lunches
-      # Calculate the penalty factor for recent repeated subgroups
-      previous_lunches_factor = calculate_previous_lunches_factor
-      # Calculate the average variance across all features for all members.
-      # Since some groups will have 1 or 2 more people than others, we can't use sum
-      @scores = Hash.new
-      calculate_group_score
-      @score = previous_lunches_factor * scores.values.sum / people.size.to_f
-      @scores['previous_lunches_factor'] = previous_lunches_factor
-      @valid = true
-    end
+    TENURE_WEIGHT = Config.config[:tenure_weight]
+    TEAM_WEIGHT = Config.config[:team_weight]
+    MANAGER_WEIGHT = Config.config[:manager_weight]
+    COLLEAGUE_WEIGHT = Config.config[:colleague_weight]
+    PREVIOUS_LUNCHES_WEIGHT = Config.config[:previous_lunches_weight]
+    PREVIOUS_LUNCHES_HALF_LIFE = Config.config[:previous_lunches_half_life]
 
-    def config
-      LunchRoulette::Config
-    end
+    attr_accessor :id, :people
 
-    def inspect
-      @people.map{|p| p.inspect }.join(", ")
+    def initialize(id:, people:)
+      @id = id
+      @people = people
     end
 
     def emails
-      @people.map{|p| p.email }.join(", ")
+      people.map(&:email)
     end
 
-    protected
+    def valid?
+      manager_score < MAX_MANAGER_SCORE &&
+        previous_lunches_score < MAX_PREVIOUS_LUNCHES_SCORE
+    end
 
-    def calculate_group_score
-      # Scores are normalized to the maximum value of all staff, then we get the standard deviation
-      # This is later averaged across all the features of the group, so that groups with higher variance
-      # will have a higher average. The averages of each group in a set is then summed to determine the
-      # overall variance of the set.
-      h = features.map do |feature|
-        s = @people.map do |person|
-          person.features[feature] / config.maxes[feature].to_f
-        end.standard_deviation
-        [feature, s * config.weights[feature]]
+    def score
+      TENURE_WEIGHT * tenure_score +
+        TEAM_WEIGHT * team_score +
+        MANAGER_WEIGHT * manager_score + 
+        COLLEAGUE_WEIGHT * colleague_score + 
+        PREVIOUS_LUNCHES_WEIGHT * previous_lunches_score
+    end
+
+    def tenure_score
+      100.0 / (1 + people.map(&:days_here).standard_deviation)
+    end
+
+    def team_score
+      10.0 / (1 + people.map(&:team_value).standard_deviation)
+    end
+    
+    def manager_score
+      names = people.map(&:name)
+      managers = people.map(&:manager)
+      overlap = names & managers
+      managers.count{|m| overlap.include?(m)}
+    end
+
+    def colleague_score
+      managers = people.map(&:manager).compact
+      managers.uniq.reduce(0) do |sum, manager|
+        count = managers.count(manager)
+        sum + (count - 1) ** 2
       end
-      @scores = Hash[*h.flatten]
     end
 
-    def calculate_previous_lunches_factor
-      factor = 1.0
-      max_lunch_id = @config.maxes['lunch_id'].to_i
-      return factor if @previous_lunches.nil?
-      @previous_lunches.each do |threshold, previous_lunches_above_threshold|
-        previous_lunches_above_threshold.each do |previous_lunch_id|
-          time = (max_lunch_id - previous_lunch_id).to_f
-          factor *= (1.0 - Math.exp(-1.0 * (time / config.time_decay_constant) ** 2))
+    def previous_lunches_score
+      previous_lunches = people.flat_map(&:previous_lunches)
+      latest_lunch = people.first.latest_lunch
+
+      previous_lunches.uniq(&:to_s).reduce(0) do |sum, prev_lunch|
+        count = previous_lunches.count{|p| prev_lunch.eql?(p)}
+        sum + (count - 1) ** 2 * previous_lunch_weight(prev_lunch, latest_lunch)
+      end
+    end
+
+    def previous_lunch_weight(prev_lunch, new_lunch)
+      coeff = -1.0 * Math.log(2) / (PREVIOUS_LUNCHES_HALF_LIFE)
+      Math.exp(coeff * (new_lunch.set_id - prev_lunch.set_id - 1))
+    end
+
+    def inspect
+      "Group #{id}: " + people.map(&:name).join(', ')
+    end
+
+    def inspect_previous_groups
+      previous_groups = Hash.new([])
+      people.each do |p|
+        p.previous_lunches.each do |l|
+          previous_groups[l.to_s] += [p.name]
         end
       end
-      factor
+      previous_groups.
+        select{|k, v| v.length > 1}.
+        sort_by{|k, v| Lunch.from_s(k).set_id}.
+        reverse.
+        map{|k, v| "#{k}: [" + v.join(', ') + ']'}
     end
 
-    def features
-      config.weights.keys
+    def inspect_scores
+      "Group #{id}: " + 
+      "score #{score.round(3)} ("+
+        "tenure #{tenure_score.round(3)}, " +
+        "teams #{team_score.round(3)}, " +
+        "managers #{manager_score.round(3)}, " +
+        "colleagues #{colleague_score.round(3)}, " +
+        "previous_lunches #{previous_lunches_score.round(3)})"
     end
 
-    # Find the group's previous lunches if there are any.
-    def find_previous_lunches
-      @people.each do |person|
-        if person.previous_lunches
-          person.previous_lunches.map do |previous_lunch|
-            @config.match_thresholds.map do |match_threshold|
-              if ((@config.previous_lunches[previous_lunch].people - [person]) & @people).size >= (match_threshold - 1)
-                @previous_lunches[match_threshold] ||= Set.new
-                @previous_lunches[match_threshold] << previous_lunch
-              end
-            end
-          end
-        end
-      end
+    def inspect_emails
+      "Group #{id}: " + emails.join(', ')
     end
   end
 end
-
