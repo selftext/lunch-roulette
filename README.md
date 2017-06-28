@@ -22,8 +22,9 @@ Other configurable options can be set at runtime, such as the path to an offline
 
 ```
 Usage: ruby lunch_roulette.rb [OPTIONS]
-    -f, --file F                     Read data from provided CSV
-    -o, --offline                    Offline mode: read and write CSV data locally; default read location is data/people.csv
+    -f, --file F                     Offline people input: read people data from provided CSV
+    -o, --offline                    Offline output: write timestamped CSV data locally to output directory
+    -s, --survey                     read survey data from configured Google sheet
     -i, --iterations I               Iterations, default 1000
     -v, --valid                      Stop searching when the first valid set is encountered
     -c, --concise                    Concise output: suppress stats and previous-lunches printouts
@@ -76,3 +77,11 @@ Lunch Roulette is designed to be a one-command affair, and to do so it leverages
 ## Surveys
 
 If you want to survey your coworkers to see who is lunchable, Lunch Roulette is equipped to use those responses to make its groups. Just make a Google Form with a yes or no question, and point Lunch Roulette to the spreadsheet of survey results. It will download those and link them to users by email address. 
+
+## Legacy support for group ids
+
+The original Lunch Roulette algorithm gave every lunch group an id, starting from 1 and increasing incrementally. This made it hard to tell which previous lunch groups occurred on the same day, and moreover it made it hard to tell just how far in the past each previous lunch actually took place.
+
+In this version of Lunch Roulette, lunches have two ids: a `set_id` and a `group_id`. For example, lunch `13-9` represents the 9th lunch group in the 13th edition of Lunch Roulette. This makes it easy to tell how far back in time a user's previous lunch was. So if you and I both were in lunch group `13-9`, and today we get put into group `20-10`, we can tell at a glance that it's been 7 session since we last dined together (20 - 13 = 7).
+
+If you have been using the legacy version of Lunch Roulette with the single-id system, fear not. I've included a conversion script `convert_legacy_data.rb` that will automatically determine and record the `set_id`-`group_id` versions of all your staff's previous lunches.
