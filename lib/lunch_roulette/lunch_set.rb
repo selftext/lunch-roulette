@@ -17,16 +17,16 @@ class LunchRoulette
     end
 
     def self.generate_groups(set_id:, people:)
-      group_count = people.length / MIN_GROUP_SIZE
-      groups = []
+      group_count = people.length / MIN_GROUP_SIZE # utilize implicit floor of int division
+      group_hash = Hash.new([])
       people.each_with_index do |person, i|
-        group_index = i % group_count
-        groups[group_index] = Array(groups[group_index]) << person
+        group_id = i % group_count + 1 # start group ids at 1 for readability
+        group_hash[group_id] += [person]
       end
-      groups.map.with_index do |g, i| 
+      group_hash.map do |group_id, members|
         LunchGroup.new(
-          id: i + 1,
-          people: g.map{|p| p.add_lunch(Lunch.new(set_id: set_id, group_id: i + 1))}
+          id: group_id,
+          people: members.map{|p| p.add_lunch(Lunch.new(set_id: set_id, group_id: group_id))}
         )
       end
     end
