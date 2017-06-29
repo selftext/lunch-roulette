@@ -1,6 +1,7 @@
 .DS_Store
 .ruby-version
 config/client_secret.json
+config/config.yml
 data/*
 !data/people_sample.csv
 !data/surveys_sample.csv
