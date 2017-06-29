@@ -61,7 +61,7 @@ class SheetsClient
   def self.update(spreadsheet_id, range, rows)
     header = rows.first.keys
     value_range = Google::Apis::SheetsV4::ValueRange.new(
-      majorDimension: "ROWS",
+      majorDimension: 'ROWS',
       range: range,
       values: [header] + rows.map{|row| header.map{|k| row[k]}}
     )

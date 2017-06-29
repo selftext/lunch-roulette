@@ -1,4 +1,4 @@
-# 🥑🥒🍔🍇 Lunch Roulette 🐓🌮🍕🍦
+# Lunch Roulette 🥑🥒🍔🍇🐓🌮🍕🍦
 
 Lunch Roulette is a tool for finding diverse dining groups among coworkers and friends. It uses staff data (stored in Google Sheets or in CSV form) to generate small lunch groups of people from different teams and tenures who haven't dined together before.
 
@@ -38,15 +38,13 @@ So that you can run Lunch Roulette out of the box, I've provided a dummy staff (
 
 ## Configuring Lunch Roulete
 
-At the minimum, Lunch Roulette needs to know how different individual features are from each other. This is achieved by hardcoding a one dimensional mapping in `config/config.yml`:
+Lunch Roulette has a lot of configurable things, such as the id of your staff Google Sheet, the weights of different diversity measures, and the format of different date strings. This is all set up in `config/config.yml`. 
+
+For first time users, copy the example config `config/config.yml.example` to `config/config.yml` and insert your own personal values as you see fit!
+
+One way Lunch Roulette computes team-based diversity is through a configurable one-dimensional mapping from teams to integers. This is a crude but effective way to approximate the relative "distance" between any two teams.
 
 ```
-iterations: 1_000
-min_group_size: 4
-
-max_manager_score: 1
-max_previous_lunches_score: 2
-
 team_mappings:
   Engineering: 0
   Data: 10
@@ -59,16 +57,9 @@ team_mappings:
   Communications: 80
   Operations: 90
   Exec: 110
-
-tenure_weight: 0.2
-team_weight: 0.9
-manager_weight: 1.0
-colleague_weight: 1.0
-previous_lunches_weight: 2.5
-previous_lunches_half_life: 2
 ```
 
-Lunch Roulette expects all employees to have a team (Community, Design, etc.) and a manager (the name of another teammate). It won't break if these are missing though.
+Lunch Roulette expects all employees to have a team (Community, Design, etc.) and a manager (the name of another teammate), though it won't break if either of these are missing.
 
 ## Using Google Sheets
 

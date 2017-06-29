@@ -28,7 +28,6 @@ class LunchRoulette
   PERSON_DATE_FORMAT = Config.config[:person_date_format]
   FILE_DATE_FORMAT = Config.config[:file_date_format]
 
-  LUNCHABLE_TRUE = Config.config[:lunchable_true]
   SURVEY_TRUE = Config.config[:survey_true]
 
   ITERATIONS = Config.config[:iterations]
@@ -72,18 +71,8 @@ class LunchRoulette
       puts "🍕  Grilling gastronomical group emails:\n#{lunch_set.inspect_emails}"
 
       puts "🍦  Flash-freezing flavorful files:"
-      people_rows = (lunch_set.people + unlunchable_people).sort_by(&:start_date).map(&:to_row)
-      if Config.options[:offline]
-        puts "Writing new people file to: #{PEOPLE_OUTPUT_FILE}"
-        CsvClient.write_csv(PEOPLE_OUTPUT_FILE, people_rows)
-      else
-        puts "Updating previous people sheet at: #{SPREADSHEET_URL}"
-        people_old_rows = people.sort_by(&:start_date).map(&:to_row)
-        SheetsClient.update(SPREADSHEET_ID, PEOPLE_OLD_RANGE, people_old_rows)
-
-        puts "Updating new people sheet at: #{SPREADSHEET_URL}"
-        SheetsClient.update(SPREADSHEET_ID, PEOPLE_RANGE, people_rows)
-      end
+      export_people(lunch_set.people + unlunchable_people)
+      export_previous_people(people) unless Config.options[:offline]
     rescue Exception => e
       puts e.message
     end
@@ -118,9 +107,9 @@ class LunchRoulette
           name: p['name'], 
           email: p['email'], 
           start_date: DateTime.strptime(p['start_date'], PERSON_DATE_FORMAT),
-          team: p['team'], 
+          team: p['team'] && p['team'].empty? ? nil : p['team'],
           manager: p['manager'] && p['manager'].empty? ? nil : p['manager'], 
-          lunchable_default: p['lunchable_default'].downcase == LUNCHABLE_TRUE,
+          lunchable_default: p['lunchable_default'].downcase == 'true',
           lunches: String(p['lunches']).split(',').map{|s| Lunch.from_s(s.strip)},
           survey: surveys.
             select(&:current?).
@@ -147,6 +136,23 @@ class LunchRoulette
           date: DateTime.strptime(s.values[2], SURVEY_DATE_FORMAT)
         )
       end
+  end
+
+  def export_people(people)
+    people_rows = people.sort_by(&:start_date).map(&:to_row)
+    if Config.options[:offline]
+      puts "Writing new people file to: #{PEOPLE_OUTPUT_FILE}"
+      CsvClient.write_csv(PEOPLE_OUTPUT_FILE, people_rows)
+    else
+      puts "Updating new people sheet at: #{SPREADSHEET_URL}"
+      SheetsClient.update(SPREADSHEET_ID, PEOPLE_RANGE, people_rows)
+    end
+  end
+
+  def export_previous_people(people)
+    people_rows = people.sort_by(&:start_date).map(&:to_row)
+    puts "Updating previous people sheet at: #{SPREADSHEET_URL}"
+    SheetsClient.update(SPREADSHEET_ID, PEOPLE_OLD_RANGE, people_rows)
   end
 end
 

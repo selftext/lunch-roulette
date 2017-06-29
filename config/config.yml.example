@@ -1,10 +1,15 @@
 ---
+  # First-time users: copy this file to `config/config.yml` and insert your own param values!
+
+  # This is the spreadsheed id / url from the Google Sheets tutorial.
+  # Please replace these with your own actual spreadsheet values.
   spreadsheet_id: '1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms'
   spreadsheet_url: 'https://docs.google.com/spreadsheets/d/1BxiMVs0XRA5nFMdKvBdBZjgmUUqptlbs74OgvE2upms/edit'
+
   people_range: 'People!A:G'
   people_old_range: 'People old!A:G'
   survey_range: 'Survey responses!A:C'
-  
+
   people_input_file: 'data/people.csv'
   people_output_file: 'data/output/people.csv'
 
@@ -12,7 +17,6 @@
   survey_date_format: '%m/%d/%Y %T'
   file_date_format: '%Y-%m-%d_%T'
 
-  lunchable_true: 'true'
   survey_true: 'yep'
 
   survey_current_lag: 20
