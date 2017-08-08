@@ -38,6 +38,112 @@ def lunch_sets(lunch_groups)
   sets
 end
 
+def people_month_groups(groups)
+  current_months_back = 0
+  current_group = 0
+  people = Hash.new([])
+
+  groups.reverse.each do |g| 
+    max_months_back = people.
+      select{|k, v| g.include? k}.
+      values.flatten.map{|v| v[:months_back]}.
+      max || 0
+
+    if max_months_back >= current_months_back 
+      current_months_back += 1
+      current_group = 0
+    end
+
+    g.each{|p| people[p] += [{months_back: current_months_back, group: current_group}]}
+    current_group += 1
+  end
+
+  people.map do |person, gs|
+    [person, gs.reverse.map{|g| {month: current_months_back - g[:months_back], group: g[:group]}}]
+  end.to_h
+end
+
+
+def groups(people)
+  people.reduce(Hash.new([])) do |accum, (person, groups)|
+    groups.each do |g|
+      accum[g] += [person]
+    end
+    accum
+  end
+end
+
+def month_groups_heavy(groups, total_months)
+  current_month = total_months
+  current_group = 0
+
+  groups.reverse.reduce(Hash.new([])) do |accum, g| 
+    min_month = accum.
+      select{|k, v| g.include? k}.
+      values.flatten.map{|v| v[:month]}.
+      min || total_months
+
+    current_group += 1
+    if min_month <= current_month 
+      current_month -= 1
+      current_group = 0
+    end
+
+    added_groups = g.map do |p|
+      [p, [{month: current_month, group: current_group}] + accum[p]]
+    end
+    accum.merge(added_groups.to_h)
+  end
+end
+
+def month_groups_merge(groups, total_months)
+  groups.sort_by{|g, _| g}.reverse.reduce(Hash.new([])) do |accum, (group, people)| 
+    min_month = accum.
+      select{|p, _| people.include? p}.
+      values.
+      flatten.
+      map{|g| g[:month]}.
+      min || total_months + 1
+
+    added_groups = people.map do |p|
+      [p, [{month: min_month - 1, group: group}]]
+    end.to_h
+    accum.merge(added_groups){|p, oldval, newval| newval + oldval}
+  end
+end
+
+def months_back(groups)
+  groups.sort_by{|g, _| g}.reverse.reduce(Hash.new([])) do |accum, (group, people)| 
+    months_back = accum.
+      select{|p, _| people.include? p}.
+      values.
+      flatten.
+      map{|g| g[:mb]}.
+      max.to_i + 1
+
+    people.each do |p|
+      accum[p] += [{mb: months_back, g: group}]
+    end
+    accum
+  end
+end
+
+def months(months_back) 
+  total_months = months_back.
+    values.
+    flatten.
+    map{|g| g[:months_back]}.
+    max
+
+  months_back.map do |p, g|
+    months = g.map do |g|
+      {month: total_months - g[:months_back] + 1, group: g[:group]}
+    end.sort_by{|g| g[:month]}
+    [p, months]
+  end.to_h
+end
+
+
 def set_groups(lunch_sets)
   lunch_sets.flat_map do |s|
     i = 0

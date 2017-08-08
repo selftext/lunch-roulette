@@ -59,7 +59,7 @@ class LunchRoulette
       puts "🥑  Devouring delicious data:"
       lunchable_people, unlunchable_people = people.partition(&:lunchable?)
 
-      puts "🥒  Slicing up #{Config.options[:iterations] || ITERATIONS} scrumptious sets:"
+      puts "🥒  Slicing up #{Config.options[:iterations] || ITERATIONS} scrumptious sets for #{lunchable_people.length} diners:"
       unless lunch_set = spin(lunchable_people, Config.options[:iterations] || ITERATIONS)
         puts "🔪  No lunch sets made the cut!"
         return

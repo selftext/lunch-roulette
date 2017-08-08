@@ -59,7 +59,7 @@ team_mappings:
   Exec: 110
 ```
 
-Lunch Roulette expects all employees to have a team (Community, Design, etc.) and a manager (the name of another teammate), though it won't break if either of these are missing.
+Lunch Roulette expects all employees to have a team (Community, Design, etc.) and a manager (the name of another teammate), though it won't break if either of these is missing.
 
 ## Using Google Sheets
 
