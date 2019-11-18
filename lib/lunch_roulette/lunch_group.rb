@@ -3,10 +3,12 @@ class LunchRoulette
 
     MAX_MANAGER_SCORE = Config.config[:max_manager_score]
     MAX_PREVIOUS_LUNCHES_SCORE = Config.config[:max_previous_lunches_score]
+    MAX_LEADERSHIP_SCORE = Config.config[:max_leadership_score]
 
     TENURE_WEIGHT = Config.config[:tenure_weight]
     TEAM_WEIGHT = Config.config[:team_weight]
     MANAGER_WEIGHT = Config.config[:manager_weight]
+    LEADERSHIP_WEIGHT = Config.config[:leadership_weight]
     COLLEAGUE_WEIGHT = Config.config[:colleague_weight]
     PREVIOUS_LUNCHES_WEIGHT = Config.config[:previous_lunches_weight]
     PREVIOUS_LUNCHES_HALF_LIFE = Config.config[:previous_lunches_half_life]
@@ -24,13 +26,14 @@ class LunchRoulette
 
     def valid?
       manager_score < MAX_MANAGER_SCORE &&
-        previous_lunches_score < MAX_PREVIOUS_LUNCHES_SCORE
+        previous_lunches_score < MAX_PREVIOUS_LUNCHES_SCORE &&
+        leadership_score < MAX_LEADERSHIP_SCORE
     end
 
     def score
       TENURE_WEIGHT * tenure_score +
         TEAM_WEIGHT * team_score +
-        MANAGER_WEIGHT * manager_score + 
+        MANAGER_WEIGHT * manager_score +
         COLLEAGUE_WEIGHT * colleague_score + 
         PREVIOUS_LUNCHES_WEIGHT * previous_lunches_score
     end
@@ -48,6 +51,11 @@ class LunchRoulette
       managers = people.map(&:manager)
       overlap = names & managers
       managers.count{|m| overlap.include?(m)}
+    end
+
+    def leadership_score
+      leaders = people.map(&:leadership)
+      leaders.count{|l| l == true}
     end
 
     def colleague_score
@@ -97,6 +105,7 @@ class LunchRoulette
         "tenure #{tenure_score.round(3)}, " +
         "teams #{team_score.round(3)}, " +
         "managers #{manager_score.round(3)}, " +
+        "leaders #{leadership_score.round(3)}, " +
         "colleagues #{colleague_score.round(3)}, " +
         "previous_lunches #{previous_lunches_score.round(3)})"
     end

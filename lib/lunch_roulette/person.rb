@@ -5,13 +5,14 @@ class LunchRoulette
     TEAM_MAPPINGS = Config.config[:team_mappings]
     LUNCHABLE_FALSE = Config.config[:lunchable_false]
 
-    attr_accessor :name, :email, :start_date, :team, :manager, :lunchable_default, :lunches, :survey
-    def initialize(name:, email:, start_date:, team:, manager: nil, lunchable_default: nil, lunches: nil, survey: nil)
+    attr_accessor :name, :email, :start_date, :team, :manager, :leadership, :lunchable_default, :lunches, :survey
+    def initialize(name:, email:, start_date:, team:, manager: nil, leadership: nil, lunchable_default: nil, lunches: nil, survey: nil)
       @name = name
       @email = email
       @start_date = start_date
       @team = team
       @manager = manager
+      @leadership = leadership
       @lunchable_default = lunchable_default
       @lunches = lunches
       @survey = survey
@@ -44,6 +45,7 @@ class LunchRoulette
         start_date: start_date,
         team: team,
         manager: manager,
+        leadership: leadership,
         lunchable_default: lunchable_default,
         lunches: lunches + Array(lunch),
         survey: survey
@@ -52,11 +54,12 @@ class LunchRoulette
 
     def to_row
       {
-        'name' => name, 
+        'name' => name,
         'email' => email, 
         'start_date' => start_date.strftime(PERSON_DATE_FORMAT), 
         'team' => team, 
-        'manager' => manager, 
+        'manager' => manager,
+        'leadership' => leadership,
         'lunchable_default' => lunchable_default, 
         'lunches' => lunches.map(&:to_s).join(', ')
       }

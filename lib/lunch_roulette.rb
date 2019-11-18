@@ -14,7 +14,7 @@ require 'lunch_roulette/lunch_group'
 require 'lunch_roulette/person'
 require 'lunch_roulette/survey'
 require 'csv_client'
-require 'sheets_client'
+# require 'sheets_client'
 
 class LunchRoulette
 
@@ -104,11 +104,12 @@ class LunchRoulette
         SheetsClient.get(SPREADSHEET_ID, PEOPLE_RANGE)
       end.map do |p|
         Person.new(
-          name: p['name'], 
+          name: p['name'],
           email: p['email'], 
           start_date: DateTime.strptime(p['start_date'], PERSON_DATE_FORMAT),
           team: p['team'] && p['team'].empty? ? nil : p['team'],
           manager: p['manager'] && p['manager'].empty? ? nil : p['manager'], 
+          leadership: p['leadership'].to_s.downcase.gsub(/\s+/, '') == 'true',
           lunchable_default: p['lunchable_default'].downcase == 'true',
           lunches: String(p['lunches']).split(',').map{|s| Lunch.from_s(s.strip)},
           survey: surveys.
