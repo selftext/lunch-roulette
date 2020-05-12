@@ -16,6 +16,12 @@ It is run using the ruby executable:
 ruby lib/lunch_roulette.rb
 ```
 
+Read in a file `data/input.csv` and output a file to `data/output`:
+
+```ruby
+ruby lib/lunch_roulette.rb -f data/input.csv -o data/output
+```
+
 Features are things like the team that a person is on, or the day they started. These features can be weighted in different ways and mapped so that some values are "closer" to others. These weights and mappings are stored in a config file.
 
 Other configurable options can be set at runtime, such as the path to an offline source CSV, the number of iterations to perform, and the ability to stop the search when the first valid lunch set is found.
